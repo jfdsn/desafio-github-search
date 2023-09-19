@@ -1,10 +1,13 @@
 package br.com.igorbag.githubsearch.ui
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
 import br.com.igorbag.githubsearch.R
@@ -22,6 +25,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setupView()
+        setupListeners()
         showUserName()
         setupRetrofit()
         getAllReposByUserName()
@@ -29,22 +33,33 @@ class MainActivity : AppCompatActivity() {
 
     // Metodo responsavel por realizar o setup da view e recuperar os Ids do layout
     fun setupView() {
-        //@TODO 1 - Recuperar os Id's da tela para a Activity com o findViewById
+        nomeUsuario = findViewById(R.id.et_nome_usuario)
+        btnConfirmar = findViewById(R.id.btn_confirmar)
+        listaRepositories = findViewById(R.id.rv_lista_repositories)
     }
 
     //metodo responsavel por configurar os listeners click da tela
     private fun setupListeners() {
-        //@TODO 2 - colocar a acao de click do botao confirmar
+        btnConfirmar.setOnClickListener {
+            saveUserLocal()
+            nomeUsuario.hint = nomeUsuario.text
+        }
     }
-
 
     // salvar o usuario preenchido no EditText utilizando uma SharedPreferences
     private fun saveUserLocal() {
-        //@TODO 3 - Persistir o usuario preenchido na editText com a SharedPref no listener do botao salvar
+        val sharedPrefs = getSharedPreferences("UserName", Context.MODE_PRIVATE)
+        val editor = sharedPrefs.edit()
+        editor.putString("UserName", nomeUsuario.text.toString())
+        editor.apply()
     }
 
     private fun showUserName() {
-        //@TODO 4- depois de persistir o usuario exibir sempre as informacoes no EditText  se a sharedpref possuir algum valor, exibir no proprio editText o valor salvo
+        val sharedPrefs = getSharedPreferences("UserName", Context.MODE_PRIVATE)
+        val valorUserName = sharedPrefs.getString("UserName", "").toString()
+
+        if(valorUserName != "") nomeUsuario.hint = valorUserName
+        else nomeUsuario.hint = "Nome do usuário"
     }
 
     //Metodo responsavel por fazer a configuracao base do Retrofit
