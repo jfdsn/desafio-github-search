@@ -2,6 +2,7 @@ package br.com.igorbag.githubsearch.ui
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -13,6 +14,12 @@ import androidx.recyclerview.widget.RecyclerView
 import br.com.igorbag.githubsearch.R
 import br.com.igorbag.githubsearch.data.GitHubService
 import br.com.igorbag.githubsearch.domain.Repository
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,12 +27,14 @@ class MainActivity : AppCompatActivity() {
     lateinit var btnConfirmar: Button
     lateinit var listaRepositories: RecyclerView
     lateinit var githubApi: GitHubService
+    lateinit var sharedPrefs: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setupView()
         setupListeners()
+        sharedPrefs = getSharedPreferences("UserName", Context.MODE_PRIVATE)
         showUserName()
         setupRetrofit()
         getAllReposByUserName()
@@ -43,19 +52,18 @@ class MainActivity : AppCompatActivity() {
         btnConfirmar.setOnClickListener {
             saveUserLocal()
             nomeUsuario.hint = nomeUsuario.text
+            getAllReposByUserName()
         }
     }
 
     // salvar o usuario preenchido no EditText utilizando uma SharedPreferences
     private fun saveUserLocal() {
-        val sharedPrefs = getSharedPreferences("UserName", Context.MODE_PRIVATE)
         val editor = sharedPrefs.edit()
         editor.putString("UserName", nomeUsuario.text.toString())
         editor.apply()
     }
 
     private fun showUserName() {
-        val sharedPrefs = getSharedPreferences("UserName", Context.MODE_PRIVATE)
         val valorUserName = sharedPrefs.getString("UserName", "").toString()
 
         if(valorUserName != "") nomeUsuario.hint = valorUserName
@@ -63,18 +71,39 @@ class MainActivity : AppCompatActivity() {
     }
 
     //Metodo responsavel por fazer a configuracao base do Retrofit
-    fun setupRetrofit() {
-        /*
-           @TODO 5 -  realizar a Configuracao base do retrofit
-           Documentacao oficial do retrofit - https://square.github.io/retrofit/
-           URL_BASE da API do  GitHub= https://api.github.com/
-           lembre-se de utilizar o GsonConverterFactory mostrado no curso
-        */
+    private fun setupRetrofit() {
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://api.github.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        githubApi = retrofit.create(GitHubService::class.java)
     }
 
     //Metodo responsavel por buscar todos os repositorios do usuario fornecido
-    fun getAllReposByUserName() {
+    private fun getAllReposByUserName() {
         // TODO 6 - realizar a implementacao do callback do retrofit e chamar o metodo setupAdapter se retornar os dados com sucesso
+        val user = sharedPrefs.getString("UserName", "").toString()
+
+        // Faz a chamada de forma assíncrona usando enqueue
+        githubApi.getAllRepositoriesByUser(user).enqueue(object : Callback<List<Repository>> {
+            override fun onResponse(call: Call<List<Repository>>, response: Response<List<Repository>>) {
+                if (response.isSuccessful) {
+                    val repos = response.body()
+                    Log.d("Data ->", repos.toString())
+                    // setupAdapter(repos)
+                } else {
+                    //Toast.makeText(applicationContext, "Nome errado ou inválido!", Toast.LENGTH_SHORT).show()
+                    Log.d("Response Error: ", response.code().toString())
+                }
+            }
+
+            override fun onFailure(call: Call<List<Repository>>, t: Throwable) {
+                Log.d("Error: ", "Falha na comunicação com API")
+            }
+        })
+
+
     }
 
     // Metodo responsavel por realizar a configuracao do adapter
@@ -113,3 +142,4 @@ class MainActivity : AppCompatActivity() {
     }
 
 }
+
