@@ -1,13 +1,17 @@
 package br.com.igorbag.githubsearch.ui
 
 
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -56,14 +60,16 @@ class MainActivity : AppCompatActivity() {
             saveUserLocal()
             nomeUsuario.hint = nomeUsuario.text
             getAllReposByUserName()
+            hideKeyboard(it)
         }
     }
 
+    //Metodo responsavel pelo setup de SharedPreferences
     fun setupSharedPrefs() {
         sharedPrefs = getSharedPreferences("UserName", MODE_PRIVATE)
     }
 
-    // salvar o usuario preenchido no EditText utilizando uma SharedPreferences
+    //Salva o usuario preenchido no EditText utilizando uma SharedPreferences
     private fun saveUserLocal() {
         val editor = sharedPrefs.edit()
         editor.putString("UserName", nomeUsuario.text.toString())
@@ -102,12 +108,13 @@ class MainActivity : AppCompatActivity() {
                     }
 
                 } else {
-                    //Toast.makeText(applicationContext, "Nome errado ou inválido!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(applicationContext, "Nome incorreto ou inválido!", Toast.LENGTH_SHORT).show()
                     Log.d("Response Error: ", response.code().toString())
                 }
             }
 
             override fun onFailure(call: Call<List<Repository>>, t: Throwable) {
+                Toast.makeText(applicationContext, "Ops! Falha na comunicação com API", Toast.LENGTH_SHORT).show()
                 Log.d("Error: ", "Falha na comunicação com API")
             }
         })
@@ -160,6 +167,11 @@ class MainActivity : AppCompatActivity() {
             )
         )
 
+    }
+
+    private fun hideKeyboard(view: View) {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
 }
