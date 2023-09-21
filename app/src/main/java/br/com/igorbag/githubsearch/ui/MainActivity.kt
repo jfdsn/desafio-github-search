@@ -1,6 +1,6 @@
 package br.com.igorbag.githubsearch.ui
 
-import android.content.Context
+
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -8,12 +8,13 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import br.com.igorbag.githubsearch.R
 import br.com.igorbag.githubsearch.data.GitHubService
 import br.com.igorbag.githubsearch.domain.Repository
+import br.com.igorbag.githubsearch.ui.adapter.RepositoryAdapter
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -34,11 +35,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         setupView()
         setupListeners()
-        sharedPrefs = getSharedPreferences("UserName", Context.MODE_PRIVATE)
+        setupSharedPrefs()
         showUserName()
         setupRetrofit()
         getAllReposByUserName()
     }
+
+
 
     // Metodo responsavel por realizar o setup da view e recuperar os Ids do layout
     fun setupView() {
@@ -54,6 +57,10 @@ class MainActivity : AppCompatActivity() {
             nomeUsuario.hint = nomeUsuario.text
             getAllReposByUserName()
         }
+    }
+
+    fun setupSharedPrefs() {
+        sharedPrefs = getSharedPreferences("UserName", MODE_PRIVATE)
     }
 
     // salvar o usuario preenchido no EditText utilizando uma SharedPreferences
@@ -82,16 +89,18 @@ class MainActivity : AppCompatActivity() {
 
     //Metodo responsavel por buscar todos os repositorios do usuario fornecido
     private fun getAllReposByUserName() {
-        // TODO 6 - realizar a implementacao do callback do retrofit e chamar o metodo setupAdapter se retornar os dados com sucesso
         val user = sharedPrefs.getString("UserName", "").toString()
 
         // Faz a chamada de forma assíncrona usando enqueue
         githubApi.getAllRepositoriesByUser(user).enqueue(object : Callback<List<Repository>> {
             override fun onResponse(call: Call<List<Repository>>, response: Response<List<Repository>>) {
                 if (response.isSuccessful) {
-                    val repos = response.body()
-                    Log.d("Data ->", repos.toString())
-                    // setupAdapter(repos)
+                    val repos : List<Repository>? = response.body()
+
+                    repos?.let {
+                        setupAdapter(repos)
+                    }
+
                 } else {
                     //Toast.makeText(applicationContext, "Nome errado ou inválido!", Toast.LENGTH_SHORT).show()
                     Log.d("Response Error: ", response.code().toString())
@@ -108,15 +117,29 @@ class MainActivity : AppCompatActivity() {
 
     // Metodo responsavel por realizar a configuracao do adapter
     fun setupAdapter(list: List<Repository>) {
-        /*
-            @TODO 7 - Implementar a configuracao do Adapter , construir o adapter e instancia-lo
-            passando a listagem dos repositorios
-         */
+        val recyclerView = findViewById<RecyclerView>(R.id.rv_lista_repositories)
+
+        // Configurar o RecyclerView com um layout manager e o adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        val adapter = RepositoryAdapter(list)
+
+        // Configurar os listeners no adapter
+        adapter.gitItemLister = { repository ->
+            // Lógica para lidar com o clique no item
+            openBrowser(repository.htmlUrl)
+        }
+
+        adapter.btnShareLister = { repository ->
+            // Lógica para lidar com o clique no botão de compartilhar
+            shareRepositoryLink(repository.htmlUrl)
+        }
+
+        // Associar o adapter ao RecyclerView
+        recyclerView.adapter = adapter
     }
 
 
     // Metodo responsavel por compartilhar o link do repositorio selecionado
-    // @Todo 11 - Colocar esse metodo no click do share item do adapter
     fun shareRepositoryLink(urlRepository: String) {
         val sendIntent: Intent = Intent().apply {
             action = Intent.ACTION_SEND
@@ -129,8 +152,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Metodo responsavel por abrir o browser com o link informado do repositorio
-
-    // @Todo 12 - Colocar esse metodo no click item do adapter
     fun openBrowser(urlRepository: String) {
         startActivity(
             Intent(
